@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { initialSettings } from '@/lib/data-store';
 import { SystemSetting } from '@/lib/types';
-import { Settings, Save, Shield, Bell, CheckCircle } from 'lucide-react';
+import { Settings, Save, Shield, CheckCircle } from 'lucide-react';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<SystemSetting>(initialSettings);

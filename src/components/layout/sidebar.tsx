@@ -11,7 +11,6 @@ import {
   Users,
   FileBarChart,
   Settings,
-  Menu,
   X,
   Building2,
 } from 'lucide-react';

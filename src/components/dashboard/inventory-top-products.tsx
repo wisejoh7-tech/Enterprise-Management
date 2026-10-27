@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { InventoryItem, TopProduct } from '@/lib/types';
-import { Package, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Package } from 'lucide-react';
 
 interface InventoryWidgetProps {
   inventory: InventoryItem[];

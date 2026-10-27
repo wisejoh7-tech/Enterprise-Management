@@ -4,12 +4,18 @@ import React, { useState } from 'react';
 import { initialProjects } from '@/lib/data-store';
 import { Project } from '@/lib/types';
 import {
-  FolderKanban,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import confetti from 'canvas-confetti';
+import {
   Plus,
   Clock,
   Users,
   DollarSign,
-  CheckCircle2,
   X,
 } from 'lucide-react';
 
@@ -71,6 +77,69 @@ export default function ProjectsPage() {
         </button>
       </div>
 
+      {/* Summary Cards with Status Chart */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 rounded-2xl bg-[#1e293b]/80 border border-slate-800 flex items-center gap-4">
+          <div className="w-24 h-24 shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Planning', value: projects.filter((p) => p.status === 'Planning').length },
+                    { name: 'In Progress', value: projects.filter((p) => p.status === 'In Progress').length },
+                    { name: 'Review', value: projects.filter((p) => p.status === 'Review').length },
+                    { name: 'Completed', value: projects.filter((p) => p.status === 'Completed').length },
+                  ]}
+                  innerRadius={25}
+                  outerRadius={40}
+                  paddingAngle={4}
+                  dataKey="value"
+                >
+                  <Cell fill="#94a3b8" />
+                  <Cell fill="#3b82f6" />
+                  <Cell fill="#f59e0b" />
+                  <Cell fill="#10b981" />
+                </Pie>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400 font-medium">Status Breakdown</p>
+            <p className="text-lg font-bold text-white">{projects.length} Total Initiatives</p>
+            <div className="flex gap-2 text-[10px] mt-1">
+              <span className="text-blue-400">● In Progress</span>
+              <span className="text-amber-400">● Review</span>
+              <span className="text-emerald-400">● Done</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#1e293b]/80 border border-slate-800 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-slate-400 font-medium">Total Capital Allocated</p>
+            <p className="text-2xl font-bold text-emerald-400">
+              ${(projects.reduce((acc, curr) => acc + curr.budget, 0) / 1000).toFixed(0)}k
+            </p>
+            <p className="text-[10px] text-slate-500 mt-1">Across active client & internal projects</p>
+          </div>
+          <DollarSign className="w-8 h-8 text-emerald-500/30" />
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#1e293b]/80 border border-slate-800 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-slate-400 font-medium">Active Resource Allocation</p>
+            <p className="text-2xl font-bold text-white">
+              {projects.reduce((acc, curr) => acc + curr.teamCount, 0)} Members
+            </p>
+            <p className="text-[10px] text-slate-500 mt-1">Assigned cross-functional team members</p>
+          </div>
+          <Users className="w-8 h-8 text-blue-500/30" />
+        </div>
+      </div>
+
       {/* Kanban Board */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {columns.map((col) => {
@@ -99,20 +168,60 @@ export default function ProjectsPage() {
                         <h4 className="text-xs font-bold text-white leading-snug">{prj.name}</h4>
                         <p className="text-[10px] text-slate-400 mt-0.5">Client: {prj.client}</p>
                       </div>
+                      <select
+                        value={prj.status}
+                        onChange={(e) => {
+                          const newStatus = e.target.value as Project['status'];
+                          setProjects((prev) =>
+                            prev.map((p) =>
+                              p.id === prj.id
+                                ? { ...p, status: newStatus, progressPercent: newStatus === 'Completed' ? 100 : p.progressPercent }
+                                : p
+                            )
+                          );
+                          if (newStatus === 'Completed') {
+                            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+                          }
+                        }}
+                        className="text-[10px] bg-slate-800 border border-slate-700 rounded text-slate-300 px-1 py-0.5"
+                      >
+                        <option value="Planning">Planning</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Review">Review</option>
+                        <option value="Completed">Completed</option>
+                      </select>
                     </div>
 
-                    {/* Progress Bar */}
+                    {/* Progress Bar & Interactive Slider */}
                     <div>
                       <div className="flex justify-between text-[10px] text-slate-400 mb-1">
                         <span>Progress</span>
                         <span className="font-semibold text-slate-200">{prj.progressPercent}%</span>
                       </div>
-                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded-full"
-                          style={{ width: `${prj.progressPercent}%` }}
-                        />
-                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={prj.progressPercent}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setProjects((prev) =>
+                            prev.map((p) =>
+                              p.id === prj.id
+                                ? {
+                                    ...p,
+                                    progressPercent: val,
+                                    status: val === 100 ? 'Completed' : p.status,
+                                  }
+                                : p
+                            )
+                          );
+                          if (val === 100) {
+                            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+                          }
+                        }}
+                        className="w-full accent-blue-500 bg-slate-800 h-1.5 rounded-lg cursor-pointer"
+                      />
                     </div>
 
                     {/* Card Footer */}

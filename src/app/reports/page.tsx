@@ -2,10 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  FileText,
   Download,
-  Filter,
-  BarChart,
   CheckCircle,
   FileSpreadsheet,
 } from 'lucide-react';
@@ -23,7 +20,7 @@ export default function ReportsPage() {
 
   const handleExport = () => {
     let content = '';
-    let filename = `${reportType.toLowerCase()}_report.${format.toLowerCase()}`;
+    const filename = `${reportType.toLowerCase()}_report.${format.toLowerCase()}`;
 
     if (reportType === 'Sales') {
       content = 'Month,Sales,Revenue,Expenses\n' + salesOverviewData.map((d) => `${d.month},${d.sales},${d.revenue},${d.expenses}`).join('\n');

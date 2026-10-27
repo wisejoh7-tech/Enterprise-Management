@@ -4,14 +4,22 @@ import React, { useState } from 'react';
 import { initialInventory } from '@/lib/data-store';
 import { InventoryItem } from '@/lib/types';
 import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
+import {
   Package,
   Plus,
   Search,
   AlertTriangle,
-  CheckCircle2,
   XCircle,
   X,
-  Edit2,
   Trash2,
 } from 'lucide-react';
 
@@ -27,6 +35,19 @@ export default function InventoryPage() {
   const [stock, setStock] = useState('');
   const [minStock, setMinStock] = useState('10');
   const [price, setPrice] = useState('');
+
+  const handleAdjustStock = (id: string, delta: number) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const newStock = Math.max(0, item.stock + delta);
+        let status: InventoryItem['status'] = 'In Stock';
+        if (newStock === 0) status = 'Out of Stock';
+        else if (newStock <= item.minStock) status = 'Low Stock';
+        return { ...item, stock: newStock, status, lastUpdated: 'Just now' };
+      })
+    );
+  };
 
   const categories = ['All', 'Electronics', 'Furniture', 'Accessories'];
 
@@ -129,6 +150,37 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* Stock Level Analytics Chart */}
+      <div className="p-5 rounded-2xl bg-[#1e293b]/80 border border-slate-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white">Stock Level Overview by Product</h3>
+            <p className="text-xs text-slate-400">Current available inventory units per item</p>
+          </div>
+        </div>
+        <div className="h-56 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={items} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+              <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} />
+              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                formatter={(value) => [`${value ?? 0} units`, 'Stock']}
+              />
+              <Bar dataKey="stock" radius={[6, 6, 0, 0]}>
+                {items.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.stock === 0 ? '#f43f5e' : entry.stock <= entry.minStock ? '#f59e0b' : '#3b82f6'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="p-5 rounded-2xl bg-[#1e293b]/80 border border-slate-800 space-y-4">
         {/* Filters */}
@@ -181,8 +233,21 @@ export default function InventoryPage() {
                   <td className="px-4 py-3 text-slate-400">{item.category}</td>
                   <td className="px-4 py-3 font-medium text-slate-200">${item.price.toFixed(2)}</td>
                   <td className="px-4 py-3">
-                    <span className="font-bold text-white">{item.stock}</span>
-                    <span className="text-[10px] text-slate-500 ml-1">(min: {item.minStock})</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleAdjustStock(item.id, -1)}
+                        className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold"
+                      >
+                        -
+                      </button>
+                      <span className="font-bold text-white w-6 text-center">{item.stock}</span>
+                      <button
+                        onClick={() => handleAdjustStock(item.id, 1)}
+                        className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span
