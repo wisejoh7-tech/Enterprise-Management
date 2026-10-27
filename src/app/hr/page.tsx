@@ -4,6 +4,15 @@ import React, { useState } from 'react';
 import { initialEmployees } from '@/lib/data-store';
 import { Employee } from '@/lib/types';
 import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import {
   Users,
   Plus,
   Search,
@@ -12,7 +21,6 @@ import {
   Building,
   DollarSign,
   UserCheck,
-  UserCheck2,
   X,
 } from 'lucide-react';
 
@@ -126,6 +134,40 @@ export default function HRPage() {
         </div>
       </div>
 
+      {/* Payroll Analytics Chart */}
+      <div className="p-5 rounded-2xl bg-[#1e293b]/80 border border-slate-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white">Payroll Budget Allocation</h3>
+            <p className="text-xs text-slate-400">Total salary distribution per department</p>
+          </div>
+        </div>
+        <div className="h-52 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={departments
+                .filter((d) => d !== 'All')
+                .map((dept) => ({
+                  department: dept,
+                  totalSalary: employees
+                    .filter((e) => e.department === dept)
+                    .reduce((a, b) => a + b.salary, 0),
+                }))}
+              margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+              <XAxis dataKey="department" stroke="#94a3b8" fontSize={11} tickLine={false} />
+              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                formatter={(value) => [`$${Number(value ?? 0).toLocaleString()}`, 'Payroll']}
+              />
+              <Bar dataKey="totalSalary" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Main Staff Directory Card */}
       <div className="p-5 rounded-2xl bg-[#1e293b]/80 border border-slate-800 space-y-4">
         {/* Search & Filters */}
@@ -201,7 +243,23 @@ export default function HRPage() {
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
-                <span className="text-slate-500 text-[10px]">Joined {emp.joinDate}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 text-[10px]">Joined {emp.joinDate}</span>
+                  <button
+                    onClick={() =>
+                      setEmployees((prev) =>
+                        prev.map((e) =>
+                          e.id === emp.id
+                            ? { ...e, status: e.status === 'Active' ? 'On Leave' : 'Active' }
+                            : e
+                        )
+                      )
+                    }
+                    className="px-2 py-0.5 rounded text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                  >
+                    Toggle Status
+                  </button>
+                </div>
                 <span className="font-bold text-white">${emp.salary.toLocaleString()}/yr</span>
               </div>
             </div>

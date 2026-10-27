@@ -11,9 +11,7 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Search,
-  Download,
   X,
-  FileSpreadsheet,
 } from 'lucide-react';
 
 export default function FinancePage() {

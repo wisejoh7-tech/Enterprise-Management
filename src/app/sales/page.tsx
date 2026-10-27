@@ -1,8 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { initialOrders } from '@/lib/data-store';
+import { initialOrders, salesOverviewData } from '@/lib/data-store';
 import { Order } from '@/lib/types';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
+import confetti from 'canvas-confetti';
 import {
   Plus,
   Search,
@@ -10,7 +20,6 @@ import {
   ShoppingBag,
   DollarSign,
   CheckCircle,
-  Clock,
   X,
   FileText,
 } from 'lucide-react';
@@ -20,12 +29,30 @@ export default function SalesPage() {
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedInvoiceOrder, setSelectedInvoiceOrder] = useState<Order | null>(null);
 
   // New Order Form state
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [itemsCount, setItemsCount] = useState('1');
+
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 80,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+  };
+
+  const handleUpdateStatus = (id: string, newStatus: Order['status']) => {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o))
+    );
+    if (newStatus === 'Completed') {
+      triggerConfetti();
+    }
+  };
 
   const filteredOrders = orders.filter((o) => {
     const matchesStatus = filterStatus === 'All' || o.status === filterStatus;
@@ -118,6 +145,39 @@ export default function SalesPage() {
         </div>
       </div>
 
+      {/* Analytics Chart */}
+      <div className="p-5 rounded-2xl bg-[#1e293b]/80 border border-slate-800 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white">Monthly Revenue vs Targets</h3>
+            <p className="text-xs text-slate-400">Comparing actual performance against fiscal projections</p>
+          </div>
+          <span className="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 text-xs font-semibold border border-blue-500/20">
+            2026 Fiscal Year
+          </span>
+        </div>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={salesOverviewData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+              <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
+              <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                formatter={(value) => [`$${Number(value ?? 0).toLocaleString()}`, 'Revenue']}
+              />
+              <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Filter and Table Controls */}
       <div className="p-5 rounded-2xl bg-[#1e293b]/80 border border-slate-800 space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -174,20 +234,29 @@ export default function SalesPage() {
                   <td className="px-4 py-3 text-slate-300">{order.itemsCount} items</td>
                   <td className="px-4 py-3 font-bold text-white">${order.total.toLocaleString()}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-semibold border ${
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleUpdateStatus(order.id, e.target.value as Order['status'])}
+                      className={`px-2 py-1 rounded-md text-[10px] font-semibold bg-slate-900 border cursor-pointer focus:outline-none ${
                         order.status === 'Completed'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          ? 'text-emerald-400 border-emerald-500/30'
                           : order.status === 'Processing'
-                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          ? 'text-blue-400 border-blue-500/30'
+                          : 'text-amber-400 border-amber-500/30'
                       }`}
                     >
-                      {order.status}
-                    </span>
+                      <option value="Processing">Processing</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800">
+                    <button
+                      onClick={() => setSelectedInvoiceOrder(order)}
+                      className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                      title="View Invoice"
+                    >
                       <FileText className="w-4 h-4" />
                     </button>
                   </td>
@@ -277,6 +346,66 @@ export default function SalesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Detail Preview Modal */}
+      {selectedInvoiceOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-[10px] font-mono text-blue-400 uppercase">Official Invoice</span>
+                <h2 className="text-lg font-bold text-white">{selectedInvoiceOrder.id}</h2>
+              </div>
+              <button
+                onClick={() => setSelectedInvoiceOrder(null)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Billed To:</span>
+                <span className="font-semibold text-white">{selectedInvoiceOrder.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Email:</span>
+                <span>{selectedInvoiceOrder.customerEmail}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Order Date:</span>
+                <span>{selectedInvoiceOrder.date}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Status:</span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  {selectedInvoiceOrder.status}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-slate-800 flex justify-between text-sm font-bold text-white">
+                <span>Total Amount:</span>
+                <span className="text-emerald-400">${selectedInvoiceOrder.total.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => alert(`Printing Invoice ${selectedInvoiceOrder.id}...`)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl"
+              >
+                Print / Download PDF
+              </button>
+              <button
+                onClick={() => setSelectedInvoiceOrder(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
